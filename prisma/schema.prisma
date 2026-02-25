@@ -1,0 +1,437 @@
+// StreetCricket Pro - Professional Cricket Match Platform
+// Database Schema for Teams, Players, Matches, Tournaments & Payments
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User accounts for team managers and players
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  phone       String?  @unique
+  avatar      String?
+  role        UserRole @default(PLAYER)
+  isVerified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  managedTeams Team[]     // Teams this user manages
+  playerStats  PlayerStat[]
+  createdMatches Match[]  // Matches created by this user
+  payments     Payment[]
+  playerProfile Player?   // Player profile if user is a player
+
+  @@map("users")
+}
+
+// Cricket Teams
+model Team {
+  id          String      @id @default(cuid())
+  name        String
+  shortName   String      // For display in scorecards
+  logo        String?
+  description String?
+  area        String      // Janakpuri, Tilak Nagar, Dwarka etc.
+  city        String      @default("Delhi")
+  isVerified  Boolean     @default(false)
+  rating      Int         @default(1200) // ELO-style rating
+  managerId   String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relationships
+  manager     User        @relation(fields: [managerId], references: [id])
+  players     Player[]
+  homeMatches Match[]     @relation("HomeTeam")
+  awayMatches Match[]     @relation("AwayTeam")
+  tournamentTeams TournamentTeam[]
+  challenges   Challenge[] @relation("ChallengingTeam")
+  challengedBy Challenge[] @relation("ChallengedTeam")
+  wonMatches   Match[]     @relation("Winner")
+  tournaments  Tournament[] @relation("TournamentWinner")
+  groundBookings GroundBooking[]
+  teamPayments Payment[]
+
+  @@map("teams")
+}
+
+// Players in teams
+model Player {
+  id          String      @id @default(cuid())
+  name        String
+  email       String?     @unique
+  phone       String?
+  role        PlayerRole
+  battingAvg  Float?      @default(0)
+  strikeRate  Float?      @default(0)
+  totalRuns   Int?        @default(0)
+  totalWickets Int?       @default(0)
+  economy     Float?      @default(0)
+  teamId      String
+  userId      String?     @unique // If player has user account
+  jerseyNumber Int?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relationships
+  team        Team        @relation(fields: [teamId], references: [id])
+  user        User?       @relation(fields: [userId], references: [id])
+  stats       PlayerStat[]
+  matchPlayers MatchPlayer[]
+
+  @@map("players")
+}
+
+// Player statistics tracking
+model PlayerStat {
+  id            String   @id @default(cuid())
+  playerId      String
+  userId        String
+  matchType     String   // "T20", "ODI", "TEST", "CUSTOM"
+  runs          Int      @default(0)
+  balls         Int      @default(0)
+  wickets       Int      @default(0)
+  overs         Float    @default(0)
+  runsConceded  Int      @default(0)
+  catches       Int      @default(0)
+  stumpings     Int      @default(0)
+  manOfTheMatch Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  player        Player   @relation(fields: [playerId], references: [id])
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@map("player_stats")
+}
+
+// Cricket Grounds
+model Ground {
+  id            String   @id @default(cuid())
+  name          String
+  address       String
+  area          String
+  pricePerSlot  Int      // Price per hour slot
+  pitchType     String   // "Turf", "Matting", "Concrete"
+  hasFloodlights Boolean @default(false)
+  hasPavilion   Boolean  @default(false)
+  capacity      Int?     // Spectator capacity
+  description   String?
+  images        String?     // JSON string of image URLs
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  matches       Match[]
+  groundBookings GroundBooking[]
+
+  @@map("grounds")
+}
+
+// Match between two teams
+model Match {
+  id              String      @id @default(cuid())
+  title           String?
+  homeTeamId      String
+  awayTeamId      String
+  groundId        String?
+  tournamentId    String?     // If part of a tournament
+  scheduledDate   DateTime
+  scheduledTime   String      // "18:00" format
+  matchFormat     MatchFormat
+  ballType        BallType    @default(TENNIS)
+  oversPerInnings Int         @default(20)
+  status          MatchStatus @default(SCHEDULED)
+  entryFee        Int         @default(10000) // Per team in rupees
+  prizePool       Int?        // Total prize money
+  platformFee     Int         @default(2000) // 10% commission
+  winnerId        String?
+  result          String?     // Match result description
+  scorecard       String?     // JSON of full scorecard
+  liveScoreUrl    String?     // URL for sharing live scores
+  createdBy       String
+  acceptedAt      DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relationships
+  homeTeam        Team        @relation("HomeTeam", fields: [homeTeamId], references: [id])
+  awayTeam        Team        @relation("AwayTeam", fields: [awayTeamId], references: [id])
+  ground          Ground?     @relation(fields: [groundId], references: [id])
+  creator         User        @relation(fields: [createdBy], references: [id])
+  winner          Team?       @relation("Winner", fields: [winnerId], references: [id])
+  players         MatchPlayer[]
+  payments        Payment[]
+  challenges      Challenge[]
+  dispute         Dispute?
+  tournament      Tournament?  @relation(fields: [tournamentId], references: [id])
+
+  @@map("matches")
+}
+
+// Players participating in a specific match
+model MatchPlayer {
+  id          String   @id @default(cuid())
+  matchId     String
+  playerId    String
+  teamId      String
+  isPlaying   Boolean  @default(true)
+  captain     Boolean  @default(false)
+  wicketKeeper Boolean @default(false)
+  battingOrder Int?
+  bowlingOrder Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  match       Match    @relation(fields: [matchId], references: [id])
+  player      Player   @relation(fields: [playerId], references: [id])
+
+  @@unique([matchId, playerId])
+  @@map("match_players")
+}
+
+// Match challenges between teams
+model Challenge {
+  id            String        @id @default(cuid())
+  challengingTeamId String
+  challengedTeamId  String?
+  matchId           String?
+  message           String?
+  proposedDate      DateTime?
+  proposedTime      String?
+  proposedFormat    MatchFormat?
+  status            ChallengeStatus @default(PENDING)
+  expiresAt         DateTime?
+  respondedAt       DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relationships
+  challengingTeam   Team @relation("ChallengingTeam", fields: [challengingTeamId], references: [id])
+  challengedTeam    Team? @relation("ChallengedTeam", fields: [challengedTeamId], references: [id])
+  match             Match? @relation(fields: [matchId], references: [id])
+
+  @@map("challenges")
+}
+
+// Tournaments
+model Tournament {
+  id              String            @id @default(cuid())
+  name            String
+  description     String?
+  format          TournamentFormat  @default(KNOCKOUT)
+  maxTeams        Int
+  entryFee        Int               @default(10000)
+  prizePool       Int?
+  startDate       DateTime
+  endDate         DateTime
+  status          TournamentStatus  @default(UPCOMING)
+  currentRound    Int               @default(1)
+  totalRounds     Int?
+  winnerId        String?
+  createdBy       String
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  // Relationships
+  teams          TournamentTeam[]
+  matches        Match[]
+  winner         Team?        @relation("TournamentWinner", fields: [winnerId], references: [id])
+
+  @@map("tournaments")
+}
+
+// Teams participating in tournaments
+model TournamentTeam {
+  id            String     @id @default(cuid())
+  tournamentId  String
+  teamId        String
+  registrationDate DateTime @default(now())
+  groupStage    String?    // Group A, B, etc. for league format
+  points        Int        @default(0)
+  matchesPlayed Int        @default(0)
+  matchesWon    Int        @default(0)
+  matchesLost   Int        @default(0)
+  netRunRate    Float      @default(0)
+
+  // Relationships
+  tournament     Tournament @relation(fields: [tournamentId], references: [id])
+  team           Team       @relation(fields: [teamId], references: [id])
+
+  @@unique([tournamentId, teamId])
+  @@map("tournament_teams")
+}
+
+// Ground bookings
+model GroundBooking {
+  id            String   @id @default(cuid())
+  groundId      String
+  teamId        String
+  date          DateTime
+  startTime     String   // "18:00" format
+  endTime       String   // "20:00" format
+  totalAmount   Int
+  status        BookingStatus @default(BOOKED)
+  paymentId     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relationships
+  ground        Ground   @relation(fields: [groundId], references: [id])
+  team          Team     @relation(fields: [teamId], references: [id])
+
+  @@map("ground_bookings")
+}
+
+// Payment records
+model Payment {
+  id            String       @id @default(cuid())
+  userId        String
+  teamId        String?
+  matchId       String?
+  tournamentId  String?
+  groundBookingId String?
+  type          PaymentType
+  amount        Int
+  status        PaymentStatus @default(PENDING)
+  method        String?      // "UPI", "RAZORPAY", "STRIPE"
+  transactionId String?      @unique
+  escrowReleased Boolean     @default(false)
+  releasedAt    DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relationships
+  user          User         @relation(fields: [userId], references: [id])
+  team          Team?        @relation(fields: [teamId], references: [id])
+  match         Match?       @relation(fields: [matchId], references: [id])
+
+  @@map("payments")
+}
+
+// Dispute resolution
+model Dispute {
+  id            String       @id @default(cuid())
+  matchId       String       @unique
+  reportedBy    String       // Team ID
+  reason        String
+  description   String
+  evidence      String?     // JSON string of evidence URLs
+  status        DisputeStatus @default(OPEN)
+  adminDecision String?
+  resolvedAt    DateTime?
+  resolvedBy    String?      // Admin user ID
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  // Relationships
+  match         Match        @relation(fields: [matchId], references: [id])
+
+  @@map("disputes")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  TEAM_MANAGER
+  PLAYER
+  UMPIRE
+}
+
+enum PlayerRole {
+  BATSMAN
+  BOWLER
+  ALL_ROUNDER
+  WICKET_KEEPER
+}
+
+enum MatchFormat {
+  T10
+  T20
+  T30
+  OD50
+  CUSTOM
+}
+
+enum BallType {
+  TENNIS
+  LEATHER
+  RUBBER
+}
+
+enum MatchStatus {
+  SCHEDULED
+  ACCEPTED
+  LIVE
+  COMPLETED
+  CANCELLED
+  ABANDONED
+  DISPUTED
+}
+
+enum ChallengeStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CONVERTED
+}
+
+enum TournamentFormat {
+  KNOCKOUT
+  LEAGUE
+  DOUBLE_LEAGUE
+  GROUP_KNOCKOUT
+}
+
+enum TournamentStatus {
+  UPCOMING
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingStatus {
+  BOOKED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentType {
+  MATCH_ENTRY
+  TOURNAMENT_ENTRY
+  GROUND_BOOKING
+  PLATFORM_FEE
+  PRIZE_PAYOUT
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum DisputeStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+}
