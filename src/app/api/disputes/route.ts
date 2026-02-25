@@ -154,6 +154,7 @@ export async function POST(request: NextRequest) {
         { error: 'Your team is not part of this match' },
         { status: 400 }
       )
+    }
 
     if (match.homeTeamId !== validatedData.againstTeamId && 
         match.awayTeamId !== validatedData.againstTeamId) {

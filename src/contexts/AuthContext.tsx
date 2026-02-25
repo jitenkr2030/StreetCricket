@@ -45,13 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const storedUser = localStorage.getItem('streetcricket_user')
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser))
+        const parsedUser = JSON.parse(storedUser)
+        // Use setTimeout to avoid calling setState synchronously
+        setTimeout(() => setUser(parsedUser), 0)
       } catch (error) {
         console.error('Error parsing stored user:', error)
         localStorage.removeItem('streetcricket_user')
       }
     }
-    setIsLoading(false)
+    // Use setTimeout to avoid calling setState synchronously
+    setTimeout(() => setIsLoading(false), 0)
   }, [])
 
   const login = async (email: string, password: string) => {

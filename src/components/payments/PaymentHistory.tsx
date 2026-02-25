@@ -18,7 +18,8 @@ import {
   Clock,
   Eye,
   Download,
-  Trophy
+  Trophy,
+  Shield
 } from 'lucide-react'
 
 interface Payment {

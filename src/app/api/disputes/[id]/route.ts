@@ -199,7 +199,7 @@ export async function PUT(
 }
 
 // POST /api/disputes/[id]/messages - Add message to dispute
-export async function POST(
+export async function POST_MESSAGE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -278,7 +278,7 @@ export async function POST(
 }
 
 // POST /api/disputes/[id]/escalate - Escalate dispute to higher priority
-export async function POST(
+export async function POST_ESCALATE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {

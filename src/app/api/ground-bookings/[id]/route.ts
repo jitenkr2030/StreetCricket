@@ -204,7 +204,7 @@ export async function DELETE(
 }
 
 // GET /api/ground-bookings/[id]/availability - Check availability for a ground
-export async function GET(
+export async function GET_AVAILABILITY(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {

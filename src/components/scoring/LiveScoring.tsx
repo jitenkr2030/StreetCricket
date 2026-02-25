@@ -273,7 +273,7 @@ export function LiveScoring({ matchId }: LiveScoringProps) {
     return (
       <Card>
         <CardContent className="py-12 text-center">
-          <Cricket className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <Gamepad2 className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Match not found</h3>
           <p className="text-gray-600">The match you're looking for doesn't exist.</p>
         </CardContent>

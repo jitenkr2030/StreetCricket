@@ -224,7 +224,7 @@ export function MediaUpload({
   }
 
   const getFileIcon = (file: File) => {
-    if (file.type.startsWith('image/')) return <Image className="w-4 h-4" />
+    if (file.type.startsWith('image/')) return <Image className="w-4 h-4" alt="Image file" />
     if (file.type.startsWith('video/')) return <Video className="w-4 h-4" />
     return <File className="w-4 h-4" />
   }

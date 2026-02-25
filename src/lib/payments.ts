@@ -63,8 +63,6 @@ class RazorpayService {
 
   // Verify payment signature
   verifyPaymentSignature(orderId: string, paymentId: string, signature: string): boolean {
-    const crypto = require('crypto')
-    
     const body = `${orderId}|${paymentId}`
     const expectedSignature = crypto
       .createHmac('sha256', this.keySecret)

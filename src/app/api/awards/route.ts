@@ -341,7 +341,13 @@ async function getTournamentWinner(period: string) {
           }
         }
       },
-      orderBy: { endDate: 'desc' }
+      _count: {
+        select: {
+          teams: true
+        }
+      }
+    },
+    orderBy: { endDate: 'desc' }
   })
 
   // In a real implementation, the winner would be determined from tournament results

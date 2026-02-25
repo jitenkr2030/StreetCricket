@@ -308,7 +308,7 @@ export async function POST(
 }
 
 // POST /api/tournaments/[id]/start - Start a tournament
-export async function POST(
+export async function POST_START(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
